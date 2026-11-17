@@ -1,0 +1,54 @@
+services:
+  redis:
+    # Redis Stack is required by langgraph-checkpoint-redis (RediSearch indices).
+    # Host port 6380 avoids clashing with a local plain Redis on 6379.
+    image: redis/redis-stack-server:7.4.0-v3
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  phoenix:
+    image: arizephoenix/phoenix:version-12.3.0
+    ports:
+      - "6006:6006"
+    environment:
+      PHOENIX_PORT: "6006"
+
+  api:
+    build: .
+    image: delivery7:latest
+    ports:
+      # Host 8001 avoids clashing with other local apps on 8000.
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      # Override host-local Phoenix endpoint when the API runs in Compose.
+      PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006/v1/traces
+    depends_on:
+      - redis
+      - phoenix
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  # --- Optional Celery worker (not used in this delivery) ---
+  # To swap asyncio @task dispatch for Celery:
+  # 1. Change app/decorators.py to wrap Celery shared_task / apply_async.
+  # 2. Uncomment the service below and add celery to requirements.txt.
+  # 3. Keep run_job(job_id) / resume_job(job_id) signatures unchanged.
+  #
+  # celery-worker:
+  #   build: .
+  #   image: delivery7:latest
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     REDIS_URL: redis://redis:6379/0
+  #     CELERY_BROKER_URL: redis://redis:6379/1
+  #   depends_on:
+  #     - redis
+  #   command: ["celery", "-A", "app.worker", "worker", "--loglevel=INFO"]
+
+volumes:
+  redis_data:

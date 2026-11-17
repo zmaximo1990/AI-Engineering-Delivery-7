@@ -1,0 +1,13 @@
+Load test client metrics (5 concurrent fixed NVIDIA questions)
+Provider for this capture run: Phoenix (OBSERVABILITY_PROVIDER=phoenix)
+Also previously ran successfully with LangSmith default.
+
+elapsed_s: [23.21, 20.25, 23.21, 23.21, 23.27]
+mean_s: 22.63
+p95_s (client e2e): 23.27
+all_done: 5/5
+
+Dashboard evidence:
+- traces.png — Phoenix projects/traces UI
+- latency_p95.png — Phoenix latency / span timing view
+- cost_per_run.png — token/cost view from LangSmith or Phoenix (capture while logged into LangSmith for official cost; Phoenix shows token counts)
