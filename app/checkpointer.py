@@ -1,9 +1,10 @@
 """Checkpointer selected by ``CHECKPOINT_BACKEND``.
 
 Redis (``AsyncRedisSaver``) is the default backend and needs Redis Stack
-(RediSearch). ``memory`` is available for local smoke tests without Redis
-indices. Register an async opener in ``_OPENERS`` and allow its name in
-``settings._CHECKPOINT_BACKENDS``.
+(RediSearch). ``sqlite`` (``AsyncSqliteSaver``) persists to
+``settings.checkpoint_db_path``. ``memory`` is available for local smoke
+tests without Redis indices. Register an async opener in ``_OPENERS`` and
+allow its name in ``settings._CHECKPOINT_BACKENDS``.
 """
 
 from collections.abc import AsyncIterator, Callable
@@ -11,6 +12,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from app.settings import settings
 
@@ -34,6 +36,15 @@ async def _open_redis() -> AsyncIterator[BaseCheckpointSaver]:
 
 
 @asynccontextmanager
+async def _open_sqlite() -> AsyncIterator[BaseCheckpointSaver]:
+    """Open the SQLite file at ``settings.checkpoint_db_path`` and create its tables."""
+    settings.checkpoint_db_path.parent.mkdir(parents=True, exist_ok=True)
+    async with AsyncSqliteSaver.from_conn_string(str(settings.checkpoint_db_path)) as saver:
+        await saver.setup()
+        yield saver
+
+
+@asynccontextmanager
 async def _open_memory() -> AsyncIterator[BaseCheckpointSaver]:
     """In-process saver. Lost on process restart; useful without Redis Stack."""
     yield MemorySaver()
@@ -41,6 +52,7 @@ async def _open_memory() -> AsyncIterator[BaseCheckpointSaver]:
 
 _OPENERS: dict[str, Opener] = {
     "redis": _open_redis,
+    "sqlite": _open_sqlite,
     "memory": _open_memory,
 }
 

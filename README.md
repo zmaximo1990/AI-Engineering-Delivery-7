@@ -131,7 +131,7 @@ Para pasar a Celery más adelante: cambiá el cuerpo de `@task` (o usá `shared_
 | `app/graph.py` | Orquestador M6 + checkpointer + HITL edge |
 | `app/hitl.py` | `interrupt` antes de researcher |
 | `app/jobs.py` | Hash Redis `job:{id}` |
-| `app/checkpointer.py` | `redis` / `memory` openers |
+| `app/checkpointer.py` | `redis` / `memory` / `sqlite` openers |
 | `app/observability.py` | LangSmith + Phoenix |
 | `app/agents/` | Especialistas del M6 |
 | `scripts/load_test.py` | 5 concurrentes + auto-approve |

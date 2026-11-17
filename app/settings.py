@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 _PROVIDERS = {"openai", "anthropic", "gemini"}
-_CHECKPOINT_BACKENDS = {"redis", "memory"}
+_CHECKPOINT_BACKENDS = {"redis", "memory", "sqlite"}
 _OBSERVABILITY_PROVIDERS = {"langsmith", "phoenix"}
 
 
@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="REDIS_URL")
     checkpoint_backend: str = Field(default="redis", validation_alias="CHECKPOINT_BACKEND")
+    checkpoint_db_path: Path = PROJECT_DIR / "data" / "graph_checkpoints.sqlite"
     observability_provider: str = Field(
         default="langsmith",
         validation_alias="OBSERVABILITY_PROVIDER",
@@ -97,6 +98,14 @@ class Settings(BaseSettings):
             allowed = ", ".join(sorted(_OBSERVABILITY_PROVIDERS))
             raise ValueError(f"OBSERVABILITY_PROVIDER must be one of: {allowed}")
         return lowered
+
+    @field_validator("checkpoint_db_path", mode="before")
+    @classmethod
+    def _resolve_project_path(cls, value: object) -> Path:
+        path = value if isinstance(value, Path) else Path(str(value).strip())
+        if not path.is_absolute():
+            path = PROJECT_DIR / path
+        return path
 
     @field_validator("recursion_limit")
     @classmethod
